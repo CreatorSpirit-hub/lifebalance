@@ -15,7 +15,7 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 10px; }
     </style>
 </head>
-<body class="custom-scrollbar overflow-hidden">
+<body class="custom-scrollbar overflow-x-hidden">
 
     <div class="flex h-screen overflow-hidden">
         <aside class="w-64 bg-gray-900 border-r border-gray-800 flex flex-col justify-between hidden md:flex z-50">
@@ -67,7 +67,7 @@
                 </div>
                 <div class="flex items-center gap-4">
                     <div class="text-right">
-                        <div class="text-sm font-bold text-white"><i class="fa-solid fa-cloud-sun text-amber-500 mr-1"></i> 74°F / Clear Sky</div>
+                        <div class="text-sm font-bold text-white"><i class="fa-solid fa-cloud-sun text-amber-500 mr-1"></i> 74°F / Node Live</div>
                     </div>
                     <div class="w-px h-8 bg-gray-800"></div>
                     <div class="flex items-center gap-2">
@@ -76,43 +76,52 @@
                 </div>
             </header>
 
-            <div id="content-mount" class="p-6 max-w-7xl w-full mx-auto space-y-6">
-                </div>
+            <div id="content-mount" class="p-6 max-w-7xl w-full mx-auto space-y-6"></div>
         </main>
     </div>
 
     <script>
-        // CORE STATE STORE DEFINITIONS WITH AUTOMATIC FAILSAFE LOCALSTORAGE BACKUP
+        // CORE APPLICATION DATA STORE
         const defaultState = {
-            xp: 0, level: 1,
+            xp: 120, level: 1,
             routine: [
-                { id: 1, day: 'Monday', class: 'Computer Systems Architecture', time: '09:00', room: 'Hall Alpha' },
-                { id: 2, day: 'Wednesday', class: 'Mathematical Calculus II', time: '13:30', room: 'Lab 3' }
+                { id: 1, day: 'Monday', class: 'English Language Syntax', time: '09:00', room: 'Room 102' },
+                { id: 2, day: 'Wednesday', class: 'Advanced Algebra Matrix', time: '13:30', room: 'Lab 3' }
+            ],
+            studySchedule: [
+                { id: 1, day: 'Monday', time: '16:00', task: 'Comp Science Canvas Architecture Study' },
+                { id: 2, day: 'Tuesday', time: '15:00', task: 'Mathematics Set Theory Exercises' }
             ],
             reminders: [
                 { id: 1, category: 'Class', msg: 'Revise algorithm layout modules', time: '08:00', done: false },
-                { id: 2, category: 'Water', msg: 'Hydration Break', time: '12:00', done: true }
+                { id: 2, category: 'Water', msg: 'Hydration Break Metric', time: '12:00', done: true }
             ],
             subjects: [
                 { id: 1, name: 'Computer Science', grade: 'A', attendance: 94 },
-                { id: 2, name: 'Mathematics II', grade: 'B+', attendance: 85 }
+                { id: 2, name: 'Mathematics', grade: 'B+', attendance: 89 }
             ],
             habits: [
                 { id: 1, name: '60 Min Study Focus Blocks', streak: 4 },
-                { id: 2, name: 'Morning Cardio Exercises', streak: 1 }
+                { id: 2, name: 'Morning Cardio Run', streak: 1 }
             ],
             goals: [
-                { id: 1, text: 'Maintain > 3.8 GPA Engine', complete: false }
+                { id: 1, text: 'Maintain high level target grades across variables', complete: false }
             ],
             finance: [
-                { id: 1, type: 'income', desc: 'Tech Stipend Fund', amount: 350 },
-                { id: 2, type: 'expense', desc: 'Premium Server Subscription', amount: 15 }
+                { id: 1, type: 'income', desc: 'Project Contract Payout', amount: 150 },
+                { id: 2, type: 'expense', desc: 'Audio Accessory Replacement', amount: 25 }
             ],
             wellness: { water: 1250, sleep: 7.2, mood: 'Productive' },
-            notes: [], flashcards: [], chatHistory: []
+            chatHistory: [
+                { sender: 'ai', text: 'System diagnostics complete. What workflow objectives are we optimizing today?' }
+            ]
         };
 
         let state = JSON.parse(localStorage.getItem('LIFEBALANCE_STORE')) || {...defaultState};
+        let currentChartInstance = null;
+        let pomodoroTimer = null;
+        let pomodoroTimeLeft = 25 * 60;
+        let pomodoroRunning = false;
 
         function saveState() {
             localStorage.setItem('LIFEBALANCE_STORE', JSON.stringify(state));
@@ -131,49 +140,57 @@
             if (state.xp >= 500) {
                 state.xp -= 500;
                 state.level += 1;
+                alert(`🚀 System Level Up! You are now Level ${state.level}!`);
             }
             saveState();
         }
 
-        // VIEW ROUTER CONTROLLER
+        // VIEW ROUTER MODULE CONTROLLER
         function switchTab(tabId) {
             document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('bg-indigo-600', 'text-white shadow-md');
+                btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-md');
                 btn.classList.add('text-gray-400');
                 if(btn.getAttribute('onclick').includes(tabId)) {
-                    btn.classList.add('bg-indigo-600', 'text-white shadow-md');
+                    btn.classList.add('bg-indigo-600', 'text-white', 'shadow-md');
                     btn.classList.remove('text-gray-400');
                 }
             });
 
+            // Safeguard active timers
+            if (pomodoroTimer) clearInterval(pomodoroTimer);
+            pomodoroRunning = false;
+
             const mount = document.getElementById('content-mount');
             mount.innerHTML = '';
 
+            // --- 1. DASHBOARD TAB ---
             if (tabId === 'dashboard') {
                 let incomingClasses = state.routine.length;
                 let activeReminders = state.reminders.filter(r => !r.done).length;
                 
                 mount.innerHTML = `
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="md:col-span-2 space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 space-y-6">
                             <div class="bg-gradient-to-r from-indigo-950/50 via-purple-950/30 to-gray-900 border border-indigo-500/20 p-6 rounded-2xl">
                                 <h2 class="text-2xl font-black text-white mb-1">System Dashboard Core</h2>
-                                <p class="text-sm text-gray-400">Engine tracking metrics running smoothly. Complete active quests to advance level tracking loops.</p>
-                                <div class="flex gap-2 mt-4">
-                                    <span class="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-bold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-calendar mr-1"></i> ${incomingClasses} Scheduled Matrix Blocks</span>
-                                    <span class="bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-bell mr-1"></i> ${activeReminders} Urgent Event Vectors</span>
+                                <p class="text-sm text-gray-400">Optimizing balancing performance matrices. Keep track of daily structures and metrics.</p>
+                                <div class="flex flex-wrap gap-2 mt-4">
+                                    <span class="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-bold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-calendar mr-1"></i> ${incomingClasses} Scheduled Classes</span>
+                                    <span class="bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold px-3 py-1.5 rounded-lg"><i class="fa-solid fa-bell mr-1"></i> ${activeReminders} Incomplete Tasks</span>
                                 </div>
                             </div>
                             
                             <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl">
-                                <h3 class="font-bold text-xs text-gray-400 uppercase tracking-wider mb-4"><i class="fa-solid fa-chart-line text-indigo-500 mr-2"></i>Productivity Matrix Analytics</h3>
-                                <canvas id="dashLineChart" class="w-full h-48"></canvas>
+                                <h3 class="font-bold text-xs text-gray-400 uppercase tracking-wider mb-4"><i class="fa-solid fa-chart-line text-indigo-500 mr-2"></i>Productivity Performance Vector</h3>
+                                <div class="h-64 relative w-full">
+                                    <canvas id="dashLineChart"></canvas>
+                                </div>
                             </div>
                         </div>
 
                         <div class="space-y-6">
                             <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl">
-                                <h3 class="font-bold text-xs text-gray-400 uppercase tracking-wider mb-4"><i class="fa-solid fa-bolt-lightning text-amber-400 mr-2"></i>Active Reminders Checklist</h3>
+                                <h3 class="font-bold text-xs text-gray-400 uppercase tracking-wider mb-4"><i class="fa-solid fa-bolt-lightning text-amber-400 mr-2"></i>Quick Dashboard Action Reminders</h3>
                                 <div id="dash-reminders-box" class="space-y-2"></div>
                             </div>
                         </div>
@@ -182,23 +199,702 @@
                 initChart();
             }
 
+            // --- 2. ROUTINE TAB ---
             else if (tabId === 'routine') {
                 mount.innerHTML = `
                     <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl space-y-6">
-                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                        <div class="flex flex-col xl:flex-row justify-between xl:items-center gap-4">
                             <div>
                                 <h2 class="text-xl font-black text-white">Smart Routine Matrix</h2>
-                                <p class="text-xs text-gray-400">Structural setup parameters map into weekly calendar grids instantly.</p>
+                                <p class="text-xs text-gray-400">Map academic lecture structures, room locations, and dynamic vectors here.</p>
                             </div>
                             <div class="flex flex-wrap gap-2">
                                 <input id="rot-class" type="text" placeholder="Class Name" class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white">
                                 <select id="rot-day" class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white">
-                                    <option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option>
+                                    <option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
                                 </select>
                                 <input id="rot-time" type="time" class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white">
                                 <input id="rot-room" type="text" placeholder="Room/Lab" class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white">
-                                <button onclick="saveRoutineItem()" class="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold px-4 py-1.5 rounded-xl text-white">Append Class</button>
+                                <button onclick="saveRoutineItem()" class="bg-indigo-600 hover:bg-indigo-700 text-xs font-bold px-4 py-1.5 rounded-xl text-white">Append Block</button>
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4" id="routine-grid-box"></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="routine-grid-box"></div>
                     </div>`;
+                renderRoutineGrid();
+            }
+
+            // --- 3. REMINDERS TAB ---
+            else if (tabId === 'reminders') {
+                mount.innerHTML = `
+                    <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl space-y-6">
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                            <div>
+                                <h2 class="text-xl font-black text-white">Reminders Checklist Queue</h2>
+                                <p class="text-xs text-gray-400">Tick off active objectives to increase level profiles instantly.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <input id="rem-msg" type="text" placeholder="Reminder text..." class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white w-48 sm:w-64">
+                                <select id="rem-cat" class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white">
+                                    <option>Class</option><option>Study</option><option>Chore</option><option>Health</option>
+                                </select>
+                                <input id="rem-time" type="time" class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white">
+                                <button onclick="addReminderItem()" class="bg-rose-600 hover:bg-rose-700 text-xs font-bold px-4 py-1.5 rounded-xl text-white">Push</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-gray-950 text-gray-400 uppercase text-[11px] font-bold tracking-wider">
+                                    <tr>
+                                        <th class="p-3 rounded-l-xl">Status</th>
+                                        <th class="p-3">Category</th>
+                                        <th class="p-3">Objective Target</th>
+                                        <th class="p-3">Schedule Link</th>
+                                        <th class="p-3 rounded-r-xl text-right">Purge</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reminders-table-body" class="divide-y divide-gray-800/60"></tbody>
+                            </table>
+                        </div>
+                    </div>`;
+                renderRemindersTable();
+            }
+
+            // --- 4. STUDY HUB TAB (WITH RESTORED STUDY SCHEDULE PLANNER) ---
+            else if (tabId === 'study') {
+                mount.innerHTML = `
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 space-y-6">
+                            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <h2 class="text-xl font-black text-white">Subject Tracker Metrics</h2>
+                                        <p class="text-xs text-gray-400">Monitor academic standings, curriculum weights, and goals.</p>
+                                    </div>
+                                    <button onclick="openSubjectModal()" class="bg-amber-500 hover:bg-amber-600 text-gray-950 text-xs font-extrabold px-3 py-1.5 rounded-xl">Add Subject</button>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="subjects-container"></div>
+                            </div>
+
+                            <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl space-y-4">
+                                <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                                    <div>
+                                        <h2 class="text-xl font-black text-white"><i class="fa-solid fa-clock text-amber-400 mr-2"></i>Study Schedule Planner</h2>
+                                        <p class="text-xs text-gray-400">Map targeted study blocks to structure your preparation.</p>
+                                    </div>
+                                    <div class="flex flex-wrap gap-2">
+                                        <select id="sched-day" class="bg-gray-800 border border-gray-700 rounded-xl px-2 py-1 text-xs text-white">
+                                            <option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option>
+                                        </select>
+                                        <input id="sched-time" type="time" class="bg-gray-800 border border-gray-700 rounded-xl px-2 py-1 text-xs text-white">
+                                        <input id="sched-task" type="text" placeholder="Topic / Task Target" class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-1 text-xs text-white w-40">
+                                        <button onclick="addStudyScheduleItem()" class="bg-amber-500 text-gray-950 hover:bg-amber-600 text-xs font-bold px-3 py-1 rounded-xl">Commit</button>
+                                    </div>
+                                </div>
+                                <div class="bg-gray-950 rounded-xl p-3 max-h-60 overflow-y-auto custom-scrollbar">
+                                    <div id="study-schedule-list" class="space-y-2"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="bg-gradient-to-b from-gray-900 to-amber-950/20 border border-amber-500/10 p-6 rounded-2xl text-center space-y-4">
+                                <h3 class="text-xs font-bold uppercase text-amber-400 tracking-widest">Focus Block State</h3>
+                                <div class="text-5xl font-black text-white tracking-tight" id="pomodoro-display">25:00</div>
+                                <div class="flex justify-center gap-2">
+                                    <button onclick="togglePomodoro()" id="pomo-start-btn" class="bg-amber-500 text-gray-950 font-bold text-xs px-4 py-2 rounded-xl hover:bg-amber-400 transition-all">Start Loop</button>
+                                    <button onclick="resetPomodoro()" class="bg-gray-800 text-gray-300 font-bold text-xs px-4 py-2 rounded-xl hover:bg-gray-700 transition-all">Reset</button>
+                                </div>
+                                <p class="text-[11px] text-gray-500">Completing a focus loop injects +100 XP into your character level profile map.</p>
+                            </div>
+                        </div>
+                    </div>`;
+                renderSubjects();
+                renderStudySchedule();
+                updatePomodoroDisplay();
+            }
+
+            // --- 5. HABITS TAB ---
+            else if (tabId === 'habits') {
+                mount.innerHTML = `
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl space-y-4">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h2 class="text-xl font-black text-white">Daily Consistency Loops</h2>
+                                    <p class="text-xs text-gray-400">Increment daily habit streaks to boost performance engines.</p>
+                                </div>
+                                <button onclick="promptAddHabit()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl">Add Loop</button>
+                            </div>
+                            <div class="space-y-2" id="habits-container"></div>
+                        </div>
+
+                        <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl space-y-4">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h2 class="text-xl font-black text-white">Milestone Goals Mapping</h2>
+                                    <p class="text-xs text-gray-400">Track overarching strategic metrics.</p>
+                                </div>
+                                <button onclick="promptAddGoal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl">Add Goal</button>
+                            </div>
+                            <div class="space-y-2" id="goals-container"></div>
+                        </div>
+                    </div>`;
+                renderHabits();
+                renderGoals();
+            }
+
+            // --- 6. WELLNESS TAB ---
+            else if (tabId === 'wellness') {
+                mount.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl text-center space-y-3">
+                            <i class="fa-solid fa-glass-water text-3xl text-sky-400"></i>
+                            <h3 class="font-bold text-sm text-gray-300">Hydration Analytics</h3>
+                            <div class="text-3xl font-black text-white">${state.wellness.water} mL</div>
+                            <div class="flex justify-center gap-2">
+                                <button onclick="adjustWater(250)" class="bg-sky-600/20 text-sky-400 border border-sky-500/30 text-xs px-3 py-1 rounded-lg font-bold">+250mL</button>
+                                <button onclick="adjustWater(-250)" class="bg-gray-800 text-gray-400 text-xs px-3 py-1 rounded-lg font-bold">-250mL</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl text-center space-y-3">
+                            <i class="fa-solid fa-bed text-3xl text-pink-400"></i>
+                            <h3 class="font-bold text-sm text-gray-300">Sleep Allocation Monitor</h3>
+                            <div class="text-3xl font-black text-white">${state.wellness.sleep} Hours</div>
+                            <div class="flex justify-center gap-2">
+                                <button onclick="adjustSleep(0.5)" class="bg-pink-600/20 text-pink-400 border border-pink-500/30 text-xs px-3 py-1 rounded-lg font-bold">+0.5h</button>
+                                <button onclick="adjustSleep(-0.5)" class="bg-gray-800 text-gray-400 text-xs px-3 py-1 rounded-lg font-bold">-0.5h</button>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl text-center space-y-3">
+                            <i class="fa-solid fa-brain text-3xl text-purple-400"></i>
+                            <h3 class="font-bold text-sm text-gray-300">Cognitive Status Index</h3>
+                            <div class="text-xl font-black text-emerald-400 mt-2">${state.wellness.mood}</div>
+                            <select onchange="updateMood(this.value)" class="bg-gray-800 border border-gray-700 text-xs text-white rounded-xl px-3 py-1.5 mx-auto block mt-2">
+                                <option ${state.wellness.mood==='Productive'?'selected':''}>Productive</option>
+                                <option ${state.wellness.mood==='Exhausted'?'selected':''}>Exhausted</option>
+                                <option ${state.wellness.mood==='Balanced'?'selected':''}>Balanced</option>
+                                <option ${state.wellness.mood==='Resting'?'selected':''}>Resting</option>
+                            </select>
+                        </div>
+                    </div>`;
+            }
+
+            // --- 7. FINANCE TAB ---
+            else if (tabId === 'finance') {
+                let totalIncome = state.finance.filter(f=>f.type==='income').reduce((acc,curr)=>acc+curr.amount, 0);
+                let totalExpense = state.finance.filter(f=>f.type==='expense').reduce((acc,curr)=>acc+curr.amount, 0);
+                let balance = totalIncome - totalExpense;
+
+                mount.innerHTML = `
+                    <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl space-y-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="bg-gray-950 p-4 rounded-xl border border-emerald-500/10 text-center">
+                                <span class="text-xs font-bold text-gray-400 uppercase">Total Inflows</span>
+                                <div class="text-xl font-black text-emerald-400">$${totalIncome}</div>
+                            </div>
+                            <div class="bg-gray-950 p-4 rounded-xl border border-rose-500/10 text-center">
+                                <span class="text-xs font-bold text-gray-400 uppercase">Total Outflows</span>
+                                <div class="text-xl font-black text-rose-400">$${totalExpense}</div>
+                            </div>
+                            <div class="bg-gray-950 p-4 rounded-xl border border-indigo-500/10 text-center">
+                                <span class="text-xs font-bold text-gray-400 uppercase">Net Balance Reserve</span>
+                                <div class="text-xl font-black text-indigo-400">$${balance}</div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row gap-3 items-end bg-gray-950 p-4 rounded-xl border border-gray-800">
+                            <div class="w-full sm:w-1/3">
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Description</label>
+                                <input id="fin-desc" type="text" placeholder="e.g. Snack pack / Stipend" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white">
+                            </div>
+                            <div class="w-full sm:w-1/4">
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Type</label>
+                                <select id="fin-type" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white">
+                                    <option value="income">Inflow (Income)</option>
+                                    <option value="expense">Outflow (Expense)</option>
+                                </select>
+                            </div>
+                            <div class="w-full sm:w-1/4">
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Amount ($)</label>
+                                <input id="fin-amount" type="number" placeholder="0.00" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white">
+                            </div>
+                            <button onclick="addFinanceRecord()" class="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-4 py-2 rounded-lg">Commit</button>
+                        </div>
+
+                        <div class="space-y-2" id="finance-list"></div>
+                    </div>`;
+                renderFinanceList();
+            }
+
+            // --- 8. AI ASSISTANT TAB ---
+            else if (tabId === 'ai-assistant') {
+                mount.innerHTML = `
+                    <div class="bg-gray-900 border border-gray-800 rounded-2xl h-[550px] flex flex-col justify-between overflow-hidden">
+                        <div class="p-4 bg-gray-950/80 border-b border-gray-800 flex items-center gap-2">
+                            <i class="fa-solid fa-robot text-purple-400"></i>
+                            <div>
+                                <h3 class="text-sm font-bold text-white">AI Copilot Logic Simulation</h3>
+                                <p class="text-[11px] text-gray-400">Local processing sequence running mock response layouts.</p>
+                            </div>
+                        </div>
+                        <div id="chat-messages-container" class="p-4 flex-1 overflow-y-auto custom-scrollbar space-y-3 text-xs"></div>
+                        <div class="p-3 bg-gray-950 border-t border-gray-800 flex gap-2">
+                            <input id="chat-user-input" type="text" placeholder="Query terminal optimization vectors..." class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-purple-500" onkeydown="if(event.key==='Enter') triggerMockAiResponse()">
+                            <button onclick="triggerMockAiResponse()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-4 rounded-xl">Execute</button>
+                        </div>
+                    </div>`;
+                renderChatHistory();
+            }
+        }
+
+        // --- DASHBOARD CORE RENDERING ENGINES ---
+        function renderDashReminders() {
+            const container = document.getElementById('dash-reminders-box');
+            if(!container) return;
+            let list = state.reminders.filter(r => !r.done);
+            if(list.length === 0) {
+                container.innerHTML = `<div class="text-center py-4 text-xs text-gray-500 font-medium">All task pipelines cleared.</div>`;
+                return;
+            }
+            container.innerHTML = list.map(r => `
+                <div class="flex justify-between items-center bg-gray-950 p-3 rounded-xl border border-gray-800/80 hover:border-indigo-500/10 transition-all">
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleReminderState(${r.id})" class="text-gray-600 hover:text-emerald-400 transition-colors"><i class="fa-regular fa-circle text-sm"></i></button>
+                        <div>
+                            <p class="text-xs text-gray-200 font-medium">${r.msg}</p>
+                            <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">${r.category} • ${r.time}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('dashLineChart');
+            if (!ctx) return;
+            if (currentChartInstance) {
+                currentChartInstance.destroy();
+            }
+            currentChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Productivity Yield Matrix',
+                        data: [65, 78, 72, 89, 85, 92, 95],
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { color: 'rgba(55,65,81,0.1)' }, strokeColor: '#fff', ticks: { color: '#9ca3af', font: { size: 10 } } },
+                        y: { grid: { color: 'rgba(55,65,81,0.1)' }, ticks: { color: '#9ca3af', font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        // --- SMART ROUTINE APP ENGINE ---
+        function renderRoutineGrid() {
+            const container = document.getElementById('routine-grid-box');
+            if (!container) return;
+            if (state.routine.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-8 text-xs text-gray-500">No classroom entries loaded into the structural engine.</div>`;
+                return;
+            }
+            container.innerHTML = state.routine.map(r => `
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2 relative group">
+                    <button onclick="deleteRoutineItem(${r.id})" class="absolute top-2 right-2 text-gray-600 hover:text-rose-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity"><i class="fa-solid fa-trash"></i></button>
+                    <span class="text-[10px] font-extrabold bg-sky-500/10 text-sky-400 px-2 py-0.5 rounded-md uppercase tracking-wider">${r.day}</span>
+                    <h4 class="text-xs font-bold text-white pt-1">${r.class}</h4>
+                    <div class="flex justify-between items-center text-[11px] text-gray-400 font-medium">
+                        <span><i class="fa-solid fa-clock mr-1 text-gray-600"></i>${r.time}</span>
+                        <span><i class="fa-solid fa-location-dot mr-1 text-gray-600"></i>${r.room}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function saveRoutineItem() {
+            const cls = document.getElementById('rot-class').value.trim();
+            const day = document.getElementById('rot-day').value;
+            const time = document.getElementById('rot-time').value;
+            const room = document.getElementById('rot-room').value.trim();
+
+            if(!cls || !time || !room) { alert('Please supply structural parameters.'); return; }
+            state.routine.push({ id: Date.now(), day, class: cls, time, room });
+            saveState();
+            renderRoutineGrid();
+            
+            document.getElementById('rot-class').value = '';
+            document.getElementById('rot-room').value = '';
+        }
+
+        function deleteRoutineItem(id) {
+            state.routine = state.routine.filter(r => r.id !== id);
+            saveState();
+            renderRoutineGrid();
+        }
+
+        // --- REMINDERS CONTROLLERS ---
+        function renderRemindersTable() {
+            const body = document.getElementById('reminders-table-body');
+            if(!body) return;
+            if(state.reminders.length === 0) {
+                body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-xs text-gray-500">Queue layout clear.</td></tr>`;
+                return;
+            }
+            body.innerHTML = state.reminders.map(r => `
+                <tr class="hover:bg-gray-950/40 transition-colors">
+                    <td class="p-3">
+                        <button onclick="toggleReminderState(${r.id})" class="${r.done ? 'text-emerald-400' : 'text-gray-600'} hover:text-emerald-500 transition-colors">
+                            <i class="${r.done ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle'} text-sm"></i>
+                        </button>
+                    </td>
+                    <td class="p-3"><span class="text-[10px] px-2 py-0.5 font-bold uppercase rounded bg-gray-800 text-gray-300 border border-gray-700/50">${r.category}</span></td>
+                    <td class="p-3 text-xs ${r.done ? 'line-through text-gray-500' : 'text-gray-200'} font-medium">${r.msg}</td>
+                    <td class="p-3 text-xs text-gray-400 font-bold">${r.time}</td>
+                    <td class="p-3 text-right"><button onclick="deleteReminderItem(${r.id})" class="text-gray-600 hover:text-rose-400 transition-colors text-xs px-2"><i class="fa-solid fa-xmark"></i></button></td>
+                </tr>
+            `).join('');
+        }
+
+        function addReminderItem() {
+            const msg = document.getElementById('rem-msg').value.trim();
+            const cat = document.getElementById('rem-cat').value;
+            const time = document.getElementById('rem-time').value;
+
+            if(!msg || !time) { alert('Missing data structures.'); return; }
+            state.reminders.push({ id: Date.now(), category: cat, msg, time, done: false });
+            addXP(25);
+            saveState();
+            renderRemindersTable();
+            document.getElementById('rem-msg').value = '';
+        }
+
+        function toggleReminderState(id) {
+            let item = state.reminders.find(r => r.id === id);
+            if(item) {
+                item.done = !item.done;
+                if(item.done) addXP(50);
+                saveState();
+                if(document.getElementById('reminders-table-body')) renderRemindersTable();
+                else renderDashReminders();
+            }
+        }
+
+        function deleteReminderItem(id) {
+            state.reminders = state.reminders.filter(r => r.id !== id);
+            saveState();
+            renderRemindersTable();
+        }
+
+        // --- RE-ENGINEERED STUDY HUB ENGINE ---
+        function renderSubjects() {
+            const container = document.getElementById('subjects-container');
+            if(!container) return;
+            container.innerHTML = state.subjects.map(s => `
+                <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-xs font-bold text-white">${s.name}</h4>
+                        <span class="text-xs font-extrabold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded">${s.grade}</span>
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[10px] text-gray-400 font-bold">
+                            <span>Attendance Tracker Index</span>
+                            <span>${s.attendance}%</span>
+                        </div>
+                        <div class="w-full bg-gray-800 h-1 rounded-full overflow-hidden">
+                            <div class="bg-amber-400 h-full" style="width: ${s.attendance}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openSubjectModal() {
+            const name = prompt("Enter Subject Module Identifier Name:");
+            if(!name) return;
+            const grade = prompt("Current Benchmark Grade Target (e.g. A, B+, C):", "A");
+            const attendance = parseInt(prompt("Calculated Attendance Metric Percent (0-100):", "90"), 10) || 100;
+            
+            state.subjects.push({ id: Date.now(), name, grade, attendance });
+            saveState();
+            renderSubjects();
+        }
+
+        // STUDY SCHEDULE IMPLEMENTATION
+        function renderStudySchedule() {
+            const container = document.getElementById('study-schedule-list');
+            if(!container) return;
+            if(state.studySchedule.length === 0) {
+                container.innerHTML = `<p class="text-center py-2 text-xs text-gray-500">No scheduled study vectors mapped yet.</p>`;
+                return;
+            }
+            container.innerHTML = state.studySchedule.map(s => `
+                <div class="flex justify-between items-center bg-gray-900 border border-gray-800 p-2 rounded-lg text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-amber-500/10 text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase">${s.day}</span>
+                        <span class="text-gray-400 font-bold">${s.time}</span>
+                        <span class="text-gray-200 font-medium">${s.task}</span>
+                    </div>
+                    <button onclick="deleteStudyScheduleItem(${s.id})" class="text-gray-500 hover:text-rose-400 px-1"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function addStudyScheduleItem() {
+            const day = document.getElementById('sched-day').value;
+            const time = document.getElementById('sched-time').value;
+            const task = document.getElementById('sched-task').value.trim();
+
+            if(!time || !task) { alert('Please map out all schedule parameters.'); return; }
+            state.studySchedule.push({ id: Date.now(), day, time, task });
+            saveState();
+            renderStudySchedule();
+            document.getElementById('sched-task').value = '';
+        }
+
+        function deleteStudyScheduleItem(id) {
+            state.studySchedule = state.studySchedule.filter(s => s.id !== id);
+            saveState();
+            renderStudySchedule();
+        }
+
+        // POMODORO LOGIC SYSTEMS
+        function updatePomodoroDisplay() {
+            const el = document.getElementById('pomodoro-display');
+            if(!el) return;
+            let mins = Math.floor(pomodoroTimeLeft / 60);
+            let secs = pomodoroTimeLeft % 60;
+            el.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function togglePomodoro() {
+            const btn = document.getElementById('pomo-start-btn');
+            if(pomodoroRunning) {
+                clearInterval(pomodoroTimer);
+                pomodoroRunning = false;
+                if(btn) btn.innerText = "Resume Loop";
+            } else {
+                pomodoroRunning = true;
+                if(btn) btn.innerText = "Pause Engine";
+                pomodoroTimer = setInterval(() => {
+                    if(pomodoroTimeLeft > 0) {
+                        pomodoroTimeLeft--;
+                        updatePomodoroDisplay();
+                    } else {
+                        clearInterval(pomodoroTimer);
+                        pomodoroRunning = false;
+                        pomodoroTimeLeft = 25 * 60;
+                        if(btn) btn.innerText = "Start Loop";
+                        addXP(100);
+                        alert("🎉 focus block processing cycle complete! Added +100 XP.");
+                        updatePomodoroDisplay();
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetPomodoro() {
+            clearInterval(pomodoroTimer);
+            pomodoroRunning = false;
+            pomodoroTimeLeft = 25 * 60;
+            updatePomodoroDisplay();
+            const btn = document.getElementById('pomo-start-btn');
+            if(btn) btn.innerText = "Start Loop";
+        }
+
+        // --- HABITS & MILESTONES CONTROLLERS ---
+        function renderHabits() {
+            const c = document.getElementById('habits-container');
+            if(!c) return;
+            c.innerHTML = state.habits.map(h => `
+                <div class="flex justify-between items-center bg-gray-950 p-3 rounded-xl border border-gray-800">
+                    <div>
+                        <p class="text-xs font-bold text-white">${h.name}</p>
+                        <span class="text-[10px] text-emerald-400 font-bold"><i class="fa-solid fa-fire text-amber-500 mr-1"></i> ${h.streak} Day Continuous Streak</span>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="incrementHabit(${h.id})" class="bg-emerald-600/20 text-emerald-400 text-xs px-2.5 py-1 rounded-lg border border-emerald-500/20 font-bold"><i class="fa-solid fa-plus"></i> Increment</button>
+                        <button onclick="deleteHabit(${h.id})" class="text-gray-600 hover:text-rose-400 p-1 text-xs"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function promptAddHabit() {
+            const name = prompt("Identify targeted consistency loop habit structure:");
+            if(!name) return;
+            state.habits.push({ id: Date.now(), name, streak: 0 });
+            saveState();
+            renderHabits();
+        }
+
+        function incrementHabit(id) {
+            let h = state.habits.find(x => x.id === id);
+            if(h) { h.streak++; addXP(30); saveState(); renderHabits(); }
+        }
+
+        function deleteHabit(id) {
+            state.habits = state.habits.filter(x => x.id !== id);
+            saveState();
+            renderHabits();
+        }
+
+        function renderGoals() {
+            const c = document.getElementById('goals-container');
+            if(!c) return;
+            c.innerHTML = state.goals.map(g => `
+                <div class="flex justify-between items-center bg-gray-950 p-3 rounded-xl border border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleGoal(${g.id})" class="${g.complete ? 'text-emerald-400' : 'text-gray-600'} hover:text-emerald-500"><i class="fa-solid ${g.complete ? 'fa-square-check' : 'fa-square'} text-sm"></i></button>
+                        <p class="text-xs ${g.complete ? 'line-through text-gray-500' : 'text-gray-200'} font-medium">${g.text}</p>
+                    </div>
+                    <button onclick="deleteGoal(${g.id})" class="text-gray-600 hover:text-rose-400 p-1 text-xs"><i class="fa-solid fa-trash"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function promptAddGoal() {
+            const txt = prompt("Target milestone goal description profile:");
+            if(!txt) return;
+            state.goals.push({ id: Date.now(), text: txt, complete: false });
+            saveState();
+            renderGoals();
+        }
+
+        function toggleGoal(id) {
+            let g = state.goals.find(x => x.id === id);
+            if(g) { g.complete = !g.complete; if(g.complete) addXP(100); saveState(); renderGoals(); }
+        }
+
+        // --- WELLNESS CONTROLLER HELPERS ---
+        function adjustWater(amt) {
+            state.wellness.water = Math.max(0, state.wellness.water + amt);
+            if(amt > 0) addXP(10);
+            saveState();
+            switchTab('wellness');
+        }
+
+        function adjustSleep(amt) {
+            state.wellness.sleep = Math.max(0, state.wellness.sleep + amt);
+            if(amt > 0) addXP(15);
+            saveState();
+            switchTab('wellness');
+        }
+
+        function updateMood(val) {
+            state.wellness.mood = val;
+            saveState();
+        }
+
+        // --- FINANCE INTEGRATED LEDGER ENGINE ---
+        function renderFinanceList() {
+            const container = document.getElementById('finance-list');
+            if(!container) return;
+            if(state.finance.length === 0) {
+                container.innerHTML = `<p class="text-center py-4 text-xs text-gray-500">No modern transaction inputs parsed yet.</p>`;
+                return;
+            }
+            container.innerHTML = state.finance.map(f => `
+                <div class="flex justify-between items-center bg-gray-950 p-2.5 rounded-xl border border-gray-800">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid ${f.type==='income'?'fa-circle-arrow-up text-emerald-400':'fa-circle-arrow-down text-rose-400'} text-md"></i>
+                        <span class="text-xs text-gray-200 font-medium">${f.desc}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-bold ${f.type==='income'?'text-emerald-400': 'text-rose-400'}">${f.type==='income'?'+':'-'}$${f.amount}</span>
+                        <button onclick="deleteFinanceRecord(${f.id})" class="text-gray-600 hover:text-rose-400 text-xs px-1"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addFinanceRecord() {
+            const desc = document.getElementById('fin-desc').value.trim();
+            const type = document.getElementById('fin-type').value;
+            const amt = parseFloat(document.getElementById('fin-amount').value);
+
+            if(!desc || isNaN(amt) || amt <= 0) { alert('Provide explicit character parameters.'); return; }
+            state.finance.push({ id: Date.now(), type, desc, amount: amt });
+            saveState();
+            switchTab('finance');
+        }
+
+        function deleteFinanceRecord(id) {
+            state.finance = state.finance.filter(f => f.id !== id);
+            saveState();
+            switchTab('finance');
+        }
+
+        // --- AI COPILOT TERMINAL CORE ---
+        function renderChatHistory() {
+            const c = document.getElementById('chat-messages-container');
+            if(!c) return;
+            c.innerHTML = state.chatHistory.map(m => `
+                <div class="flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}">
+                    <div class="${m.sender === 'user' ? 'bg-purple-600 text-white' : 'bg-gray-950 text-gray-300 border border-gray-800'} max-w-md p-2.5 rounded-xl font-medium leading-relaxed shadow-sm">
+                        ${m.text}
+                    </div>
+                </div>
+            `).join('');
+            c.scrollTop = c.scrollHeight;
+        }
+
+        function triggerMockAiResponse() {
+            const input = document.getElementById('chat-user-input');
+            if(!input || !input.value.trim()) return;
+            let userTxt = input.value.trim();
+            state.chatHistory.push({ sender: 'user', text: userTxt });
+            input.value = '';
+            renderChatHistory();
+
+            setTimeout(() => {
+                let responses = [
+                    "Optimization cycle completed. Tracking metrics reveal peak balance values.",
+                    "Objective recorded. Ensure consistency streaks are locked in to secure efficiency outputs.",
+                    "Data points synthesized. Target focus blocks updated within study schedule modules successfully."
+                ];
+                let fallbackTxt = responses[Math.floor(Math.random() * responses.length)];
+                state.chatHistory.push({ sender: 'ai', text: fallbackTxt });
+                saveState();
+                renderChatHistory();
+            }, 750);
+        }
+
+        // --- EXPORT & GLOBAL UTILITIES ---
+        function exportData() {
+            const file = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(file);
+            a.download = `lifebalance_backup_${Math.floor(Date.now()/1000)}.json`;
+            a.click();
+        }
+
+        function clearAllData() {
+            if(confirm("Confirm full data clear? Resetting returns tracking storage engines to default metrics.")) {
+                localStorage.removeItem('LIFEBALANCE_STORE');
+                state = {...defaultState};
+                saveState();
+                switchTab('dashboard');
+            }
+        }
+
+        // --- LIFEBOOT INIT APPLICATION BOOTSTRAP BLOCK ---
+        window.onload = function() {
+            updateGamificationUI();
+            switchTab('dashboard');
+        }
+    </script>
+</body>
+</html>
