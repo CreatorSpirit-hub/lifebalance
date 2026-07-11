@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LifeBalance OS v3.5</title>
+    <title>LifeBalance OS v4.0</title>
+    <!-- Tailwind CSS & Icons -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -18,18 +19,21 @@
 <body class="custom-scrollbar overflow-hidden">
 
     <div class="flex h-screen overflow-hidden">
+        <!-- SIDEBAR NAVIGATION -->
         <aside class="w-66 bg-gray-900 border-r border-gray-800 flex flex-col justify-between hidden md:flex z-50">
             <div class="p-5 overflow-y-auto h-full custom-scrollbar space-y-5">
+                <!-- App Logo -->
                 <div class="flex items-center gap-3">
                     <div class="bg-gradient-to-tr from-indigo-500 to-purple-600 p-2.5 rounded-xl text-white shadow-lg">
                         <i class="fa-solid fa-graduation-cap text-xl"></i>
                     </div>
                     <div>
                         <h1 class="font-extrabold text-md tracking-tight text-white">LifeBalance OS</h1>
-                        <span class="text-xs text-indigo-400 font-semibold">v3.5 Student Edition</span>
+                        <span class="text-xs text-indigo-400 font-semibold">v4.0 Web Edition</span>
                     </div>
                 </div>
 
+                <!-- XP Gaming Level System -->
                 <div class="bg-gray-800/60 p-4 rounded-xl border border-gray-700/50">
                     <div class="flex justify-between text-xs font-bold mb-1.5">
                         <span class="text-yellow-400"><i class="fa-solid fa-star mr-1"></i> Level <span id="sb-level">1</span></span>
@@ -40,6 +44,7 @@
                     </div>
                 </div>
 
+                <!-- Sidebar Tabs -->
                 <nav class="space-y-1">
                     <button onclick="switchTab('dashboard')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:bg-gray-800/50 hover:text-white transition-all text-left"><i class="fa-solid fa-house w-5 text-center text-indigo-400"></i> Home Dashboard</button>
                     <button onclick="switchTab('routine')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:bg-gray-800/50 hover:text-white transition-all text-left"><i class="fa-solid fa-calendar-week w-5 text-center text-sky-400"></i> School Routine</button>
@@ -52,6 +57,7 @@
                 </nav>
             </div>
 
+            <!-- Bottom Control Panel -->
             <div class="p-4 border-t border-gray-800 bg-gray-950/40 space-y-2">
                 <div class="flex gap-2">
                     <button onclick="exportData()" class="w-1/2 text-[11px] bg-gray-800 py-2 rounded-lg text-gray-300 hover:bg-gray-700 font-bold"><i class="fa-solid fa-download mr-1"></i> Export Data</button>
@@ -60,7 +66,9 @@
             </div>
         </aside>
 
+        <!-- MAIN APP WINDOW -->
         <main class="flex-1 flex flex-col overflow-y-auto custom-scrollbar bg-[#0f1422]">
+            <!-- Top Dashboard Bar -->
             <header class="h-16 border-b border-gray-800 bg-gray-900/80 backdrop-blur flex items-center justify-between px-6 sticky top-0 z-40">
                 <div class="text-xs bg-gray-800 px-3 py-1.5 rounded-xl text-gray-400 font-medium border border-gray-700/40">
                     <span id="top-quote-text">"Small daily improvements over time lead to stunning results."</span>
@@ -75,12 +83,13 @@
                 </div>
             </header>
 
+            <!-- Main Display Mounting Node -->
             <div id="content-mount" class="p-6 max-w-7xl w-full mx-auto space-y-6"></div>
         </main>
     </div>
 
+    <!-- MAIN INTERACTIVE APP JAVASCRIPT ENGINE -->
     <script>
-        // LocalStorage Save & Load Structure
         const defaultState = {
             xp: 0, level: 1,
             routine: [
@@ -96,14 +105,14 @@
                 { id: 2, name: 'Mathematics', grade: 'A+', attendance: 90 }
             ],
             exams: [
-                { id: 1, name: 'SEE Board Mock Test', date: '2026-04-15' }
+                { id: 1, name: 'Board Mock Test', date: '2026-04-15' }
             ],
             habits: [
                 { id: 1, name: 'Solve 1 Math Set Question', streak: 5 },
                 { id: 2, name: 'Read English Book for 15 mins', streak: 2 }
             ],
             goals: [
-                { id: 1, text: 'Score 4.0 GPA in Final Exams', complete: false }
+                { id: 1, text: 'Score high marks in Final Exams', complete: false }
             ],
             visionBoard: [
                 { id: 1, text: 'Top Student Award Ceremony' }
@@ -116,13 +125,23 @@
             workouts: [
                 { id: 1, name: '15 Pushups & Light Stretching', complete: false }
             ],
+            achievements: [
+                { id: 1, name: "First Steps", desc: "Reach Level 2", unlocked: false },
+                { id: 2, name: "Study Scholar", desc: "Reach Level 5", unlocked: false },
+                { id: 3, name: "Habit Master", desc: "Reach Level 10", unlocked: false }
+            ],
             flashcards: [], chatHistory: []
         };
 
-        let state = JSON.parse(localStorage.getItem('LIFEBALANCE_V35_DATA')) || {...defaultState};
+        let state = JSON.parse(localStorage.getItem('LIFEBALANCE_V40_DATA')) || {...defaultState};
+
+        // Pomodoro State Variables
+        let pMins = 25;
+        let pSecs = 0;
+        let pInterval = null;
 
         function saveState() {
-            localStorage.setItem('LIFEBALANCE_V35_DATA', JSON.stringify(state));
+            localStorage.setItem('LIFEBALANCE_V40_DATA', JSON.stringify(state));
             updateGamificationUI();
         }
 
@@ -131,6 +150,14 @@
             document.getElementById('sb-xp').innerText = state.xp;
             document.getElementById('sb-xp-bar').style.width = `${(state.xp / 500) * 100}%`;
             document.getElementById('header-badge').innerText = `Level ${state.level} Student`;
+            
+            // Auto check Achievement system status updates
+            state.achievements.forEach(ach => {
+                if (!ach.unlocked && state.level >= (ach.id === 1 ? 2 : ach.id === 2 ? 5 : 10)) { 
+                    ach.unlocked = true;
+                    alert(`🏆 Achievement Unlocked: ${ach.name}! - ${ach.desc}`);
+                }
+            });
         }
 
         function addXP(amount) {
@@ -143,7 +170,7 @@
             saveState();
         }
 
-        // TAB SWITCH NAVIGATION SYSTEM
+        // TAB NAVIGATION ROUTING CONTROLLER
         function switchTab(tabId) {
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-md');
@@ -157,9 +184,13 @@
             const mount = document.getElementById('content-mount');
             mount.innerHTML = '';
 
-            // 1. HOME DASHBOARD TAB
+            // 1. HOME DASHBOARD TAB (With Live Performance Scoring Card)
             if (tabId === 'dashboard') {
                 let openTasks = state.reminders.filter(r => !r.done).length;
+                let totalItems = state.reminders.length + state.habits.length;
+                let completedItems = state.reminders.filter(r => r.done).length + state.habits.filter(h => h.streak > 0).length;
+                let performancePct = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+
                 mount.innerHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="md:col-span-2 space-y-6">
@@ -167,9 +198,17 @@
                                 <h2 class="text-2xl font-black text-white mb-1">Your Daily Learning Station 🚀</h2>
                                 <p class="text-sm text-gray-300">Welcome back! You have <span class="text-yellow-400 font-bold">${openTasks} tasks</span> waiting for your attention today.</p>
                                 <div class="mt-4 flex flex-wrap gap-2">
-                                    <span class="bg-indigo-500/20 text-indigo-300 px-3 py-1.5 rounded-lg text-xs font-semibold"><i class="fa-solid fa-graduation-cap mr-1"></i> Class 10 Mode Active</span>
-                                    <span class="bg-emerald-500/20 text-emerald-300 px-3 py-1.5 rounded-lg text-xs font-semibold"><i class="fa-solid fa-circle-check mr-1"></i> Routine Safe</span>
+                                    <span class="bg-indigo-500/20 text-indigo-300 px-3 py-1.5 rounded-lg text-xs font-semibold"><i class="fa-solid fa-graduation-cap mr-1"></i> Productive Mindset Active</span>
                                 </div>
+                            </div>
+
+                            <!-- Live Productivity Rating Score -->
+                            <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl flex items-center justify-between">
+                                <div>
+                                    <div class="text-[11px] font-bold text-gray-400 uppercase">Daily Productivity Score</div>
+                                    <div class="text-xl font-extrabold text-emerald-400 mt-0.5">${performancePct}% Tasks Completed</div>
+                                </div>
+                                <div class="w-12 h-12 rounded-full border-4 border-gray-800 border-t-emerald-500 flex items-center justify-center text-xs font-bold text-white">📈</div>
                             </div>
                             
                             <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl">
@@ -179,6 +218,22 @@
                         </div>
 
                         <div class="space-y-6">
+                            <!-- Unlocked Badges / Achievement Tracking Panel -->
+                            <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl">
+                                <h3 class="text-sm font-bold text-gray-400 uppercase mb-3"><i class="fa-solid fa-trophy text-yellow-500 mr-2"></i>Unlocked Badges</h3>
+                                <div class="space-y-2">
+                                    ${state.achievements.map(a => `
+                                        <div class="flex items-center gap-3 p-2 rounded-lg ${a.unlocked ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-gray-800/30 opacity-40'}">
+                                            <span class="text-lg">${a.unlocked ? '🥇' : '🔒'}</span>
+                                            <div>
+                                                <div class="text-xs font-bold text-gray-200">${a.name}</div>
+                                                <div class="text-[10px] text-gray-400">${a.desc}</div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+
                             <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl">
                                 <h3 class="text-sm font-bold text-gray-400 uppercase mb-3"><i class="fa-solid fa-list-check text-rose-400 mr-2"></i>Quick Tasks For Today</h3>
                                 <div id="dash-reminders-box" class="space-y-2"></div>
@@ -189,7 +244,7 @@
                 initChart();
             }
 
-            // 2. SCHOOL ROUTINE TIMETABLE TAB
+            // 2. TIMETABLE TAB
             else if (tabId === 'routine') {
                 mount.innerHTML = `
                     <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl space-y-6">
@@ -199,7 +254,7 @@
                                 <p class="text-xs text-gray-400">Map out your daily school or coaching class timings below.</p>
                             </div>
                             <div class="flex flex-wrap gap-2">
-                                <input id="rot-class" type="text" placeholder="Class Name (e.g., Math)" class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white">
+                                <input id="rot-class" type="text" placeholder="Class Name" class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white">
                                 <select id="rot-day" class="bg-gray-800 border border-gray-700 rounded-xl px-3 py-1.5 text-xs text-white">
                                     <option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option>
                                 </select>
@@ -213,7 +268,7 @@
                 renderRoutineView();
             }
 
-            // 3. MULTI-CATEGORY REMINDERS TAB
+            // 3. REMINDERS TAB
             else if (tabId === 'reminders') {
                 mount.innerHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -227,7 +282,7 @@
                             <div class="grid grid-cols-2 gap-2">
                                 <input id="rem-time-val" type="time" class="bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
                                 <select id="rem-cat" class="bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
-                                    <option>Homework</option><option>Class</option><option>Medicine</option><option>Water Break</option><option>Birthday</option><option>Sleep</option>
+                                    <option>Homework</option><option>Class</option><option>Water Break</option><option>Sleep</option>
                                 </select>
                             </div>
                             <button onclick="commitReminder()" class="w-full bg-indigo-600 hover:bg-indigo-700 py-2.5 rounded-xl text-xs font-bold text-white">Save Reminder</button>
@@ -236,7 +291,7 @@
                 renderRemindersView();
             }
 
-            // 4. STUDY HUB TAB (SUBJECTS, ATTENDANCE, EXAM COUNTDOWN & FLASHCARDS)
+            // 4. STUDY HUB TAB
             else if (tabId === 'study') {
                 mount.innerHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -283,7 +338,6 @@
                             <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl text-center">
                                 <div class="text-xs font-bold text-gray-500 uppercase mb-1">Estimated GPA Rating</div>
                                 <div class="text-4xl font-black text-amber-400" id="gpa-display-val">3.90</div>
-                                <p class="text-[11px] text-gray-500 mt-2">Auto-calculated from your grade inputs.</p>
                             </div>
                             <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl">
                                 <h3 class="font-bold text-xs text-gray-400 uppercase mb-2">Total Attendance Average</h3>
@@ -297,7 +351,7 @@
                 renderStudyView();
             }
 
-            // 5. HABITS, SMART GOALS & VISION BOARD TAB
+            // 5. HABITS & GOALS TAB
             else if (tabId === 'habits') {
                 mount.innerHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -339,13 +393,12 @@
                         <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl h-fit">
                             <h3 class="font-bold text-xs text-gray-400 uppercase mb-3">Habit Heatmap Activity</h3>
                             <div class="grid grid-cols-7 gap-1.5" id="heatmap-render-node"></div>
-                            <div class="text-[10px] text-gray-500 mt-2 text-center">Visual calendar summary of habit ticks</div>
                         </div>
                     </div>`;
                 renderHabitsView();
             }
 
-            // 6. HEALTH & WELLNESS TAB (MEDITATION TIMER, WATER LOG & WORKOUT)
+            // 6. HEALTH & WELLNESS TAB (With Integrated Focus Pomodoro Countdown)
             else if (tabId === 'wellness') {
                 mount.innerHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -377,27 +430,28 @@
                                     <input id="inp-weight" type="number" placeholder="Weight (kg)" class="w-1/2 bg-gray-800 border border-gray-700 rounded-xl p-2 text-xs text-white">
                                     <button onclick="saveWeight()" class="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-xl text-white">Calculate BMI</button>
                                 </div>
-                                <div class="text-xs text-gray-300 mt-1" id="bmi-label-display">Current Weight: ${state.wellness.weight || 0}kg | BMI: ${state.wellness.bmi || 0}</div>
+                                <div class="text-xs text-gray-300 mt-1" id="bmi-label-display">Weight: ${state.wellness.weight || 0}kg | BMI: ${state.wellness.bmi || 0}</div>
                             </div>
                         </div>
 
                         <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl space-y-6">
+                            <!-- Advanced Focus Pomodoro System -->
                             <div>
-                                <h2 class="text-xl font-black text-white mb-2">Mindfulness & Meditation Timer</h2>
-                                <div class="bg-purple-950/20 border border-purple-500/20 p-4 rounded-xl flex items-center justify-between">
-                                    <div>
-                                        <div class="text-xs font-bold text-white">Simple Breathing & Calm Session</div>
-                                        <div class="text-[11px] text-purple-300">Sit upright, relax and inhale steadily.</div>
+                                <h2 class="text-xl font-black text-white mb-2">Focused Pomodoro Timer</h2>
+                                <div class="bg-purple-950/20 border border-purple-500/20 p-5 rounded-xl text-center space-y-3">
+                                    <div class="text-4xl font-mono font-black text-purple-400" id="pomodoro-display">25:00</div>
+                                    <div class="flex justify-center gap-2">
+                                        <button onclick="startPomodoro()" class="bg-purple-600 hover:bg-purple-700 text-xs font-bold px-5 py-2 rounded-xl text-white">Start Session</button>
+                                        <button onclick="resetPomodoro()" class="bg-gray-800 hover:bg-gray-700 text-xs font-bold px-5 py-2 rounded-xl border border-gray-700 text-gray-300">Reset</button>
                                     </div>
-                                    <button onclick="runMeditationTimer()" class="bg-purple-600 hover:bg-purple-700 text-xs font-bold px-4 py-2 rounded-xl text-white"><i class="fa-solid fa-play mr-1"></i> 5 Min Timer</button>
                                 </div>
                             </div>
 
                             <div class="space-y-3">
                                 <div class="flex justify-between items-center">
-                                    <h3 class="font-bold text-xs text-gray-400 uppercase">Workout & Exercises</h3>
+                                    <h3 class="font-bold text-xs text-gray-400 uppercase">Workout Exercises</h3>
                                     <div class="flex gap-2">
-                                        <input id="wk-name" type="text" placeholder="Exercise routine..." class="bg-gray-800 border border-gray-700 rounded-xl px-2 py-1 text-xs text-white">
+                                        <input id="wk-name" type="text" placeholder="Exercise name..." class="bg-gray-800 border border-gray-700 rounded-xl px-2 py-1 text-xs text-white">
                                         <button onclick="commitWorkout()" class="bg-indigo-600 text-xs font-bold px-3 py-1 rounded-xl text-white">Add</button>
                                     </div>
                                 </div>
@@ -406,9 +460,11 @@
                         </div>
                     </div>`;
                 renderWellnessView();
+                // Ensure text accurately updates if active pomodoro session is currently running in background
+                document.getElementById('pomodoro-display').innerText = `${String(pMins).padStart(2, '0')}:${String(pSecs).padStart(2, '0')}`;
             }
 
-            // 7. MONEY TRACKER TAB (INCOME, EXPENSES & MONTHLY REPORTS)
+            // 7. MONEY TRACKER TAB
             else if (tabId === 'finance') {
                 mount.innerHTML = `
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -418,7 +474,7 @@
                         </div>
                         <div class="bg-gray-900 border border-gray-800 p-5 rounded-2xl h-fit space-y-4">
                             <h3 class="font-bold text-xs text-gray-400 uppercase">Add Transaction</h3>
-                            <input id="fin-desc" type="text" placeholder="Description (e.g., Snacks, Pen)" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
+                            <input id="fin-desc" type="text" placeholder="Description" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
                             <div class="grid grid-cols-2 gap-2">
                                 <input id="fin-amt" type="number" placeholder="Amount (Rs.)" class="bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
                                 <select id="fin-type" class="bg-gray-800 border border-gray-700 rounded-xl p-2.5 text-xs text-white">
@@ -426,10 +482,10 @@
                                     <option value="expense">Expense (-)</option>
                                 </select>
                             </div>
-                            <button onclick="commitFinance()" class="w-full bg-indigo-600 hover:bg-indigo-700 py-2.5 rounded-xl text-xs font-bold text-white">Save Ledger Entry</button>
+                            <button onclick="commitFinance()" class="w-full bg-indigo-600 hover:bg-indigo-700 py-2.5 rounded-xl text-xs font-bold text-white">Save Entry</button>
                             <div class="h-px bg-gray-800 my-2"></div>
                             <div class="flex justify-between items-center text-xs text-gray-400 font-bold">
-                                <span>Net Savings Wallet:</span>
+                                <span>Net Wallet Savings:</span>
                                 <span class="text-emerald-400 text-sm" id="fin-total-lbl">Rs. 0</span>
                             </div>
                         </div>
@@ -437,7 +493,7 @@
                 renderFinanceView();
             }
 
-            // 8. AI STUDY CO-PILOT TAB
+            // 8. AI STUDY HELP TAB
             else if (tabId === 'ai-assistant') {
                 mount.innerHTML = `
                     <div class="bg-gray-900 border border-gray-800 p-6 rounded-2xl flex flex-col h-[480px]">
@@ -445,12 +501,12 @@
                             <div class="bg-purple-600/20 text-purple-400 p-2.5 rounded-xl border border-purple-500/20"><i class="fa-solid fa-robot text-lg"></i></div>
                             <div>
                                 <h2 class="font-black text-white text-md">AI Personal Study Copilot</h2>
-                                <p class="text-xs text-gray-400">Ask the assistant to optimize study patterns or break down daily routine goals.</p>
+                                <p class="text-xs text-gray-400">Ask simple questions to optimize notes and target revision workflows.</p>
                             </div>
                         </div>
                         <div id="chat-scroller" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2 text-xs"></div>
                         <div class="flex gap-2 border-t border-gray-800 pt-4 mt-2">
-                            <input id="ai-query-input" type="text" placeholder="Ask your AI assistant anything..." class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-purple-500" onkeydown="if(event.key === 'Enter') dispatchAIQuery()">
+                            <input id="ai-query-input" type="text" placeholder="Ask your AI assistant anything..." class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-xs text-white focus:outline-none" onkeydown="if(event.key === 'Enter') dispatchAIQuery()">
                             <button onclick="dispatchAIQuery()" class="bg-purple-600 hover:bg-purple-700 text-xs font-bold px-5 py-2 rounded-xl text-white">Send</button>
                         </div>
                     </div>`;
@@ -458,7 +514,41 @@
             }
         }
 
-        // ================= INTERACTIVE FUNCTION SUB-LOGIC CODES =================
+        // ================= ENGINE WORKFLOW SUB-FUNCTIONS =================
+
+        function startPomodoro() {
+            if (pInterval) return;
+            pInterval = setInterval(() => {
+                if (pSecs === 0) {
+                    if (pMins === 0) {
+                        clearInterval(pInterval);
+                        pInterval = null;
+                        alert("⏰ Time's up! Take a short break.");
+                        addXP(50);
+                        resetPomodoro();
+                        return;
+                    }
+                    pMins--;
+                    pSecs = 59;
+                } else {
+                    pSecs--;
+                }
+                if(document.getElementById('pomodoro-display')) {
+                    document.getElementById('pomodoro-display').innerText = 
+                        `${String(pMins).padStart(2, '0')}:${String(pSecs).padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+
+        function resetPomodoro() {
+            clearInterval(pInterval);
+            pInterval = null;
+            pMins = 25;
+            pSecs = 0;
+            if(document.getElementById('pomodoro-display')) {
+                document.getElementById('pomodoro-display').innerText = "25:00";
+            }
+        }
 
         function renderDashReminders() {
             const container = document.getElementById('dash-reminders-box');
@@ -469,9 +559,8 @@
                         <input type="checkbox" ${r.done ? 'checked' : ''} onclick="toggleReminder(${r.id})" class="w-4 h-4 rounded text-indigo-600 bg-gray-900 border-gray-700">
                         <span class="text-xs ${r.done ? 'line-through text-gray-500' : 'text-gray-200'}">${r.msg}</span>
                     </div>
-                    <span class="text-[10px] font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">${r.category}</span>
                 </div>
-            `).join('') || '<div class="text-xs text-gray-600 italic">No tasks left for today! Add some in Reminders.</div>';
+            `).join('') || '<div class="text-xs text-gray-600 italic">No tasks.</div>';
         }
 
         function toggleReminder(id) {
@@ -493,7 +582,7 @@
                 let targets = state.routine.filter(r => r.day === day);
                 return `
                     <div class="bg-gray-950/40 p-3 rounded-xl border border-gray-800 min-h-[200px]">
-                        <h4 class="text-xs font-extrabold text-indigo-400 mb-3 uppercase tracking-wider border-b border-gray-800 pb-1">${day}</h4>
+                        <h4 class="text-xs font-extrabold text-indigo-400 mb-3 uppercase border-b border-gray-800 pb-1">${day}</h4>
                         <div class="space-y-2">
                             ${targets.map(t => `
                                 <div class="bg-gray-800 p-2 rounded-lg border border-gray-700/50 relative group">
@@ -501,7 +590,7 @@
                                     <div class="text-[10px] text-gray-400 mt-1 flex justify-between">
                                         <span>${t.time}</span><span>${t.room}</span>
                                     </div>
-                                    <button onclick="killRoutineItem(${t.id})" class="absolute top-1 right-1 text-red-400 hover:text-red-300 text-[10px] hidden group-hover:block"><i class="fa-solid fa-xmark"></i></button>
+                                    <button onclick="killRoutineItem(${t.id})" class="absolute top-1 right-1 text-red-400 text-[10px] hidden group-hover:block"><i class="fa-solid fa-xmark"></i></button>
                                 </div>
                             `).join('')}
                         </div>
@@ -515,12 +604,11 @@
             let time = document.getElementById('rot-time').value;
             let room = document.getElementById('rot-room').value;
             if(!cls || !time) return;
-            state.routine.push({ id: Date.now(), day, class: cls, time, room: room || 'Classroom' });
+            state.routine.push({ id: Date.now(), day, class: cls, time, room });
             addXP(25);
             saveState();
             renderRoutineView();
             document.getElementById('rot-class').value = '';
-            document.getElementById('rot-room').value = '';
         }
 
         function killRoutineItem(id) {
@@ -536,13 +624,9 @@
                 <div class="flex items-center justify-between bg-gray-800/30 p-3 rounded-xl border border-gray-800">
                     <div class="flex items-center gap-3">
                         <input type="checkbox" ${r.done ? 'checked' : ''} onclick="toggleReminder(${r.id})" class="w-4 h-4 text-indigo-600 bg-gray-900 border-gray-700">
-                        <span class="text-[10px] font-bold text-gray-400 bg-gray-800 px-2 py-0.5 rounded">${r.category}</span>
                         <span class="text-xs ${r.done ? 'line-through text-gray-500' : 'text-gray-200'}">${r.msg}</span>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-[10px] font-mono text-gray-500">${r.time}</span>
-                        <button onclick="killReminder(${r.id})" class="text-xs text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
-                    </div>
+                    <button onclick="killReminder(${r.id})" class="text-xs text-gray-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
                 </div>`).join('');
         }
 
@@ -570,39 +654,24 @@
                 <div class="bg-gray-800/40 p-3 rounded-xl border border-gray-800 flex justify-between items-center">
                     <div>
                         <div class="text-xs font-bold text-white">${s.name}</div>
-                        <div class="text-[11px] text-gray-400 mt-0.5">Class Attendance: <span class="text-emerald-400 font-bold">${s.attendance}%</span></div>
+                        <div class="text-[11px] text-gray-400">Attendance: <span class="text-emerald-400">${s.attendance}%</span></div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-xs bg-indigo-500/10 text-indigo-400 px-2.5 py-1 rounded-lg font-bold">Grade ${s.grade}</span>
-                        <button onclick="killSubject(${s.id})" class="text-gray-600 hover:text-red-400 text-xs"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                </div>`).join('') || '<div class="text-xs text-gray-600 italic">No subject items found.</div>';
+                    <span class="text-xs bg-indigo-500/10 text-indigo-400 px-2 rounded font-bold">${s.grade}</span>
+                </div>`).join('');
 
             const exBox = document.getElementById('exam-countdown-list');
-            exBox.innerHTML = state.exams.map(ex => {
-                let diffTime = new Date(ex.date) - new Date();
-                let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                let displayDays = diffDays > 0 ? `${diffDays} days left` : 'Completed/Today';
-                return `
+            exBox.innerHTML = state.exams.map(ex => `
                 <div class="bg-gray-800/50 p-3 rounded-xl border border-gray-800 flex justify-between items-center text-xs">
-                    <div><span class="font-bold text-white">${ex.name}</span> <span class="text-gray-500">(${ex.date})</span></div>
-                    <span class="bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded font-bold text-[11px]">${displayDays}</span>
-                </div>`;
-            }).join('');
+                    <div><span class="font-bold text-white">${ex.name}</span></div>
+                    <span class="bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded font-bold">${ex.date}</span>
+                </div>`).join('');
 
             const fcBox = document.getElementById('flashcard-box-list');
             fcBox.innerHTML = state.flashcards.map(f => `
                 <div class="bg-gray-800/30 p-3 rounded-xl border border-gray-800 flex flex-col justify-between h-20 cursor-pointer" onclick="this.querySelector('.fc-ans').classList.toggle('hidden')">
-                    <div class="text-xs font-bold text-white"><span class="text-amber-400">Q:</span> ${f.q}</div>
-                    <div class="text-xs font-medium text-emerald-400 fc-ans hidden"><span class="text-gray-400">A:</span> ${f.a}</div>
-                    <div class="text-[9px] text-gray-500 text-right uppercase">Click Card to Reveal Answer</div>
-                </div>`).join('') || '<div class="text-xs text-gray-600 italic col-span-2">No active cards created.</div>';
-
-            if(state.subjects.length > 0) {
-                let totalAttn = Math.round(state.subjects.reduce((acc, s) => acc + parseInt(s.attendance || 0), 0) / state.subjects.length);
-                document.getElementById('attendance-progress-bar').style.width = `${totalAttn}%`;
-                document.getElementById('attendance-pct-lbl').innerText = `${totalAttn}% Overall Attendance`;
-            }
+                    <div class="text-xs font-bold text-white">Q: ${f.q}</div>
+                    <div class="text-xs font-medium text-emerald-400 fc-ans hidden">A: ${f.a}</div>
+                </div>`).join('') || '<div class="text-xs text-gray-600 italic">No cards.</div>';
         }
 
         function commitSubject() {
@@ -611,18 +680,7 @@
             let attn = document.getElementById('sub-attn').value;
             if(!name || !grade || !attn) return;
             state.subjects.push({ id: Date.now(), name, grade, attendance: parseInt(attn) });
-            addXP(40);
-            saveState();
-            renderStudyView();
-            document.getElementById('sub-name').value = '';
-            document.getElementById('sub-grade').value = '';
-            document.getElementById('sub-attn').value = '';
-        }
-
-        function killSubject(id) {
-            state.subjects = state.subjects.filter(s => s.id !== id);
-            saveState();
-            renderStudyView();
+            addXP(40); saveState(); renderStudyView();
         }
 
         function commitExam() {
@@ -630,10 +688,7 @@
             let date = document.getElementById('ex-date').value;
             if(!name || !date) return;
             state.exams.push({ id: Date.now(), name, date });
-            saveState();
-            renderStudyView();
-            document.getElementById('ex-name').value = '';
-            document.getElementById('ex-date').value = '';
+            saveState(); renderStudyView();
         }
 
         function commitFlashcard() {
@@ -641,10 +696,7 @@
             let a = document.getElementById('fc-a').value;
             if(!q || !a) return;
             state.flashcards.push({ id: Date.now(), q, a });
-            saveState();
-            renderStudyView();
-            document.getElementById('fc-q').value = '';
-            document.getElementById('fc-a').value = '';
+            saveState(); renderStudyView();
         }
 
         function renderHabitsView() {
@@ -653,12 +705,9 @@
                 <div class="bg-gray-800/40 p-3 rounded-xl border border-gray-800 flex justify-between items-center">
                     <div>
                         <div class="text-xs font-bold text-white">${h.name}</div>
-                        <div class="text-[11px] text-gray-400 mt-0.5"><i class="fa-solid fa-fire text-amber-500 mr-1"></i> Current Streak: ${h.streak} Days</div>
+                        <div class="text-[11px] text-gray-400">Streak: ${h.streak} days</div>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="bumpHabit(${h.id})" class="bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 text-xs px-3 py-1 rounded-lg font-bold">Done</button>
-                        <button onclick="killHabit(${h.id})" class="text-gray-600 hover:text-red-400 text-xs px-1"><i class="fa-solid fa-trash"></i></button>
-                    </div>
+                    <button onclick="bumpHabit(${h.id})" class="bg-emerald-600 text-xs px-3 py-1 rounded-lg font-bold text-white">Done</button>
                 </div>`).join('');
 
             const gl = document.getElementById('goals-box-list');
@@ -669,15 +718,12 @@
                 </div>`).join('');
 
             const vb = document.getElementById('vision-box-list');
-            vb.innerHTML = state.visionBoard.map(v => `
-                <div class="bg-gradient-to-br from-indigo-950 to-slate-900 p-3 rounded-xl border border-indigo-500/20 text-center text-xs font-semibold text-gray-200">
-                    ${v.text}
-                </div>`).join('');
+            vb.innerHTML = state.visionBoard.map(v => `<div class="bg-indigo-950 p-3 rounded-xl border border-indigo-500/20 text-center text-xs font-semibold">${v.text}</div>`).join('');
 
             const heatmap = document.getElementById('heatmap-render-node');
             heatmap.innerHTML = '';
             for(let i=0; i<35; i++) {
-                let bg = (i % 5 === 0) ? 'bg-emerald-600' : (i % 3 === 0 ? 'bg-indigo-600' : 'bg-gray-800');
+                let bg = (i % 5 === 0) ? 'bg-emerald-600' : 'bg-gray-800';
                 heatmap.innerHTML += `<div class="w-full aspect-square rounded-sm ${bg}"></div>`;
             }
         }
@@ -686,9 +732,7 @@
             let name = document.getElementById('hb-name').value;
             if(!name) return;
             state.habits.push({ id: Date.now(), name, streak: 0 });
-            saveState();
-            renderHabitsView();
-            document.getElementById('hb-name').value = '';
+            saveState(); renderHabitsView();
         }
 
         function bumpHabit(id) {
@@ -696,19 +740,11 @@
             if(h) { h.streak += 1; addXP(25); saveState(); renderHabitsView(); }
         }
 
-        function killHabit(id) {
-            state.habits = state.habits.filter(x => x.id !== id);
-            saveState();
-            renderHabitsView();
-        }
-
         function commitGoal() {
             let text = document.getElementById('gl-text').value;
             if(!text) return;
             state.goals.push({ id: Date.now(), text, complete: false });
-            saveState();
-            renderHabitsView();
-            document.getElementById('gl-text').value = '';
+            saveState(); renderHabitsView();
         }
 
         function toggleGoal(id) {
@@ -720,47 +756,29 @@
             let text = document.getElementById('vb-text').value;
             if(!text) return;
             state.visionBoard.push({ id: Date.now(), text });
-            saveState();
-            renderHabitsView();
-            document.getElementById('vb-text').value = '';
+            saveState(); renderHabitsView();
         }
 
         function renderWellnessView() {
             const list = document.getElementById('workout-box-list');
             if(!list) return;
-            list.innerHTML = state.workouts.map(w => `
-                <div class="flex items-center justify-between bg-gray-800/40 p-2.5 rounded-xl border border-gray-800">
-                    <span class="text-xs text-gray-200">${w.name}</span>
-                    <button onclick="killWorkout(${w.id})" class="text-gray-500 hover:text-red-400 text-xs"><i class="fa-solid fa-square-minus"></i></button>
-                </div>`).join('');
+            list.innerHTML = state.workouts.map(w => `<div class="bg-gray-800 p-2 rounded-xl text-xs">${w.name}</div>`).join('');
         }
 
         function commitWorkout() {
             let name = document.getElementById('wk-name').value;
             if(!name) return;
             state.workouts.push({ id: Date.now(), name, complete: false });
-            saveState();
-            renderWellnessView();
-            document.getElementById('wk-name').value = '';
-        }
-
-        function killWorkout(id) {
-            state.workouts = state.workouts.filter(w => w.id !== id);
-            saveState();
-            renderWellnessView();
+            saveState(); renderWellnessView();
         }
 
         function adjustWater(amt) {
-            state.wellness.water += amt;
-            addXP(10);
-            saveState();
+            state.wellness.water += amt; addXP(10); saveState();
             document.getElementById('lbl-water-val').innerText = state.wellness.water;
         }
 
         function adjustSleep(val) {
-            if(!val) return;
-            state.wellness.sleep = parseFloat(val);
-            saveState();
+            if(!val) return; state.wellness.sleep = parseFloat(val); saveState();
             document.getElementById('lbl-sleep-val').innerText = state.wellness.sleep;
         }
 
@@ -768,15 +786,9 @@
             let w = document.getElementById('inp-weight').value;
             if(!w) return;
             state.wellness.weight = parseFloat(w);
-            // hardcoded standard sample height 1.68m for estimation metric 
             state.wellness.bmi = (state.wellness.weight / (1.68 * 1.68)).toFixed(1);
             saveState();
-            document.getElementById('bmi-label-display').innerText = `Current Weight: ${state.wellness.weight}kg | BMI: ${state.wellness.bmi}`;
-        }
-
-        function runMeditationTimer() {
-            alert("🧘 5-Minute Mindful Breathing Exercise started. Take deep breaths in... and exhale smoothly.");
-            addXP(30);
+            document.getElementById('bmi-label-display').innerText = `Weight: ${state.wellness.weight}kg | BMI: ${state.wellness.bmi}`;
         }
 
         function renderFinanceView() {
@@ -784,8 +796,8 @@
             if(!list) return;
             list.innerHTML = state.finance.map(f => `
                 <div class="bg-gray-800/40 p-3 rounded-xl border border-gray-800 flex justify-between items-center text-xs">
-                    <span class="font-bold text-gray-200">${f.desc}</span>
-                    <span class="font-extrabold ${f.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}">${f.type === 'income' ? '+' : '-'} Rs. ${f.amount}</span>
+                    <span>${f.desc}</span>
+                    <span class="${f.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}">Rs. ${f.amount}</span>
                 </div>`).join('');
 
             let income = state.finance.filter(f => f.type === 'income').reduce((a, b) => a + parseInt(b.amount || 0), 0);
@@ -799,26 +811,16 @@
             let type = document.getElementById('fin-type').value;
             if(!desc || !amt) return;
             state.finance.push({ id: Date.now(), type, desc, amount: parseInt(amt) });
-            saveState();
-            renderFinanceView();
-            document.getElementById('fin-desc').value = '';
-            document.getElementById('fin-amt').value = '';
+            saveState(); renderFinanceView();
         }
 
         function renderAIHistory() {
             const container = document.getElementById('chat-scroller');
             if(!container) return;
-            container.innerHTML = `
-                <div class="bg-gray-800/40 p-3 rounded-xl border border-gray-700/30 max-w-xl">
-                    <span class="text-purple-400 font-bold block mb-1">🤖 AI Study Helper</span>
-                    Hi there! I am your student co-pilot. Ask me for suggestions on your school classes, routine optimization, tracking habits, or scoring top grades!
-                </div>` + state.chatHistory.map(c => `
-                <div class="bg-gray-800/20 p-3 rounded-xl border border-gray-800 max-w-xl ml-auto text-right">
-                    <span class="text-gray-400 block font-bold mb-0.5">You</span>${c.q}
-                </div>
-                <div class="bg-purple-950/20 p-3 rounded-xl border border-purple-500/20 max-w-xl">
-                    <span class="text-purple-400 block font-bold mb-0.5">AI Response</span>${c.a}
-                </div>`).join('');
+            container.innerHTML = `<div class="bg-gray-800/40 p-3 rounded-xl max-w-xl">Ask any daily learning strategy suggestion!</div>` + 
+            state.chatHistory.map(c => `
+                <div class="bg-gray-800/20 p-2 rounded-xl text-right ml-auto max-w-sm">You: ${c.q}</div>
+                <div class="bg-purple-950/20 p-2 rounded-xl max-w-sm">AI: ${c.a}</div>`).join('');
             container.scrollTop = container.scrollHeight;
         }
 
@@ -826,18 +828,10 @@
             let input = document.getElementById('ai-query-input');
             if(!input.value) return;
             let query = input.value;
+            let response = "That looks like an important objective! Set a 25-minute Pomodoro block to tackle it.";
             
-            let response = "That looks like an important objective! Try setting a small 30-minute target timer daily to crush it easily.";
-            if(query.toLowerCase().includes('routine') || query.toLowerCase().includes('class')) {
-                response = `You currently have ${state.routine.length} active classes in your schedule tracker. Make sure to review notes immediately after each class!`;
-            } else if(query.toLowerCase().includes('exam') || query.toLowerCase().includes('gpa')) {
-                response = "To score top marks, use the Flashcards tool in your Study Hub daily to test your memory on weak topics!";
-            }
-
             state.chatHistory.push({ q: query, a: response });
-            saveState();
-            renderAIHistory();
-            input.value = '';
+            saveState(); renderAIHistory(); input.value = '';
         }
 
         function initChart() {
@@ -848,20 +842,11 @@
                 data: {
                     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                     datasets: [{
-                        label: 'Study Hours Logged',
                         data: [4, 5.5, 3.8, 6.2, 5, 7.5, 6],
-                        borderColor: '#6366f1',
-                        backgroundColor: 'rgba(99, 102, 241, 0.05)',
-                        fill: true, tension: 0.4
+                        borderColor: '#6366f1', fill: false, tension: 0.4
                     }]
                 },
-                options: {
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: '#6b7280' } },
-                        y: { grid: { color: '#1f2937' }, ticks: { color: '#6b7280' } }
-                    }
-                }
+                options: { plugins: { legend: { display: false } } }
             });
         }
 
@@ -869,18 +854,12 @@
             let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
             let downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "lifebalance_v35_backup.json");
-            document.body.appendChild(downloadAnchor);
+            downloadAnchor.setAttribute("download", "lifebalance_backup.json");
             downloadAnchor.click();
-            downloadAnchor.remove();
         }
 
         function clearAllData() {
-            if(confirm("Are you sure you want to completely erase your app data and start fresh?")) {
-                state = {...defaultState};
-                saveState();
-                switchTab('dashboard');
-            }
+            if(confirm("Erase all data?")) { state = {...defaultState}; saveState(); switchTab('dashboard'); }
         }
 
         window.onload = () => { switchTab('dashboard'); updateGamificationUI(); };
